@@ -1,0 +1,51 @@
+version: '3'
+services:
+  db:
+    image: postgres:10.5
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    restart: always
+    volumes:
+      - /tmp/postgresql/data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: "rabbitmq:3.7.7-management"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+    volumes:
+      - ./rabbitmq-isolated.conf:/etc/rabbitmq/rabbitmq.config
+
+  web:
+    image: evanilukhin/rock:0.1.0
+    environment:
+      # Variables to connect to our Postgres server
+      ROCK_USER: postgres
+      ROCK_PASS: postgres
+      ROCK_DATABASE: rock_db
+      ROCK_HOST: db
+      ROCK_PORT: 5432
+      RABBIT_LOGIN: guest
+      RABBIT_PASS: guest
+      RABBIT_HOST: rabbitmq
+    ports:
+      - "5000:5000"
+    restart: always
+    depends_on:
+      - db
+      - rabbitmq
+
+  bot:
+    image: evanilukhin/rock_bot:0.1.0
+    environment:
+      RABBIT_LOGIN: guest
+      RABBIT_PASS: guest
+      RABBIT_HOST: rabbitmq
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+      TELEGRAM_API_BASE_URL: "${TELEGRAM_API_BASE_URL}"
+    restart: always
+    depends_on:
+     - rabbitmq
