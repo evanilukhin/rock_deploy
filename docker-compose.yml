@@ -1,4 +1,4 @@
-version: '3'
+version: '2.1'
 services:
   db:
     image: postgres:10.5
@@ -8,6 +8,11 @@ services:
     restart: always
     volumes:
       - /tmp/postgresql/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5  
 
   rabbitmq:
     image: "rabbitmq:3.7.7-management"
@@ -16,6 +21,10 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - ./rabbitmq-isolated.conf:/etc/rabbitmq/rabbitmq.config
+    healthcheck:
+      test: ["CMD-SHELL", "if rabbitmqctl status; then \nexit 0 \nfi \nexit 1"]
+      interval: 10s
+      retries: 5
 
   web:
     image: evanilukhin/rock:0.1.0
@@ -33,8 +42,10 @@ services:
       - "5000:5000"
     restart: always
     depends_on:
-      - db
-      - rabbitmq
+     rabbitmq:
+       condition: service_healthy
+     db:
+       condition: service_healthy
 
   bot:
     image: evanilukhin/rock_bot:0.1.0
@@ -45,5 +56,11 @@ services:
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
       TELEGRAM_API_BASE_URL: "${TELEGRAM_API_BASE_URL}"
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://rabbitmq:15672/api/aliveness-test"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
     depends_on:
-     - rabbitmq
+     rabbitmq:
+       condition: service_healthy
