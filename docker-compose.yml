@@ -27,7 +27,7 @@ services:
       retries: 5
 
   web:
-    image: evanilukhin/rock:0.1.0
+    image: evanilukhin/rock_web:0.1.0
     environment:
       # Variables to connect to our Postgres server
       ROCK_USER: postgres
